@@ -1,42 +1,614 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Syria Business Directory</title>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>دليل سوريا الشامل | Syria Connect</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <style>
-      body {
-        font-family: 'Cairo', sans-serif;
-      }
-      /* Custom Scrollbar for Webkit */
-      ::-webkit-scrollbar {
-        width: 8px;
-      }
-      ::-webkit-scrollbar-track {
-        background: #f1f5f9; 
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #94a3b8; 
-        border-radius: 4px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #64748b; 
-      }
+        body { font-family: 'Cairo', sans-serif; }
+        .glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        /* Modal Transitions */
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; }
+        .slide-enter-active, .slide-leave-active { transition: transform 0.3s ease; }
+        .slide-enter-from, .slide-leave-to { transform: translateY(20px); opacity: 0; }
+        
+        [dir="ltr"] { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        /* Custom Scrollbar for Modal */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@^19.2.4",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "react/": "https://esm.sh/react@^19.2.4/"
-  }
-}
-</script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0f766e', // Teal 700
+                        secondary: '#115e59', // Teal 800
+                        accent: '#f59e0b', // Amber 500
+                        surface: '#f8fafc',
+                    }
+                }
+            }
+        }
+    </script>
 </head>
-  <body class="bg-slate-50 text-slate-800 antialiased selection:bg-emerald-200 selection:text-emerald-900">
-    <div id="root"></div>
-  </body>
+<body class="bg-surface text-slate-800 antialiased selection:bg-primary selection:text-white">
+
+    <div id="app" class="relative min-h-screen flex flex-col">
+        
+        <header class="fixed w-full z-40 top-0 glass">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-20">
+                    <div class="flex items-center gap-3 cursor-pointer group" @click="resetFilters">
+                        <div class="bg-primary/10 p-2 rounded-lg group-hover:bg-primary/20 transition">
+                            <i class="fa-solid fa-map-location-dot text-3xl text-primary"></i>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="font-extrabold text-xl tracking-tight text-slate-900 leading-none">{{ t('appName') }}</span>
+                            <span class="text-xs text-slate-500 font-semibold tracking-wide">DIRECTORY</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-3">
+                        <button @click="openAdmin" class="hidden md:flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-full text-sm font-bold transition shadow-sm border border-slate-200">
+                            <i class="fa-solid fa-plus-circle text-accent"></i>
+                            <span>{{ t('addListing') }}</span>
+                        </button>
+                        <button @click="openAdmin" class="md:hidden bg-slate-100 p-3 rounded-full text-accent shadow-sm"><i class="fa-solid fa-plus"></i></button>
+
+                        <button @click="toggleLang" class="bg-white hover:bg-gray-50 text-primary px-4 py-2 rounded-full text-sm font-bold transition flex items-center shadow-sm border border-slate-200">
+                            <i class="fa-solid fa-globe mx-2"></i>
+                            {{ currentLang === 'ar' ? 'English' : 'العربية' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="pt-32 pb-20 bg-gradient-to-br from-primary via-teal-800 to-slate-900 text-white rounded-b-[3rem] shadow-2xl mb-12 relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
+            <div class="absolute bottom-0 left-0 w-72 h-72 bg-accent/20 rounded-full blur-3xl -ml-10 -mb-10"></div>
+
+            <div class="max-w-5xl mx-auto px-4 text-center relative z-10">
+                <span class="bg-white/20 backdrop-blur-md px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-6 inline-block border border-white/10">
+                    {{ t('heroTag') }}
+                </span>
+                <h1 class="text-4xl md:text-6xl font-extrabold mb-6 leading-tight drop-shadow-lg">
+                    {{ t('heroTitle') }}
+                </h1>
+                <p class="text-xl md:text-2xl mb-10 opacity-90 font-light max-w-2xl mx-auto leading-relaxed">
+                    {{ t('heroSubtitle') }}
+                </p>
+                
+                <div class="bg-white p-3 rounded-3xl shadow-xl flex flex-col md:flex-row gap-3 max-w-4xl mx-auto border border-white/20 backdrop-blur-sm">
+                    <div class="flex-grow flex items-center px-4 bg-slate-50 rounded-2xl border border-slate-200 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+                        <i class="fa-solid fa-search text-slate-400 text-xl"></i>
+                        <input v-model="searchQuery" type="text" :placeholder="t('searchPlaceholder')" 
+                            class="w-full p-4 bg-transparent outline-none text-slate-700 placeholder-slate-400 font-medium">
+                    </div>
+                    
+                    <div class="flex items-center px-4 bg-slate-50 rounded-2xl border border-slate-200 w-full md:w-64 relative">
+                        <i class="fa-solid fa-location-dot text-accent text-xl mx-2"></i>
+                        <select v-model="selectedCity" class="w-full p-4 bg-transparent outline-none text-slate-700 font-bold appearance-none cursor-pointer z-10">
+                            <option value="">{{ t('allCities') }}</option>
+                            <option v-for="city in cities" :key="city.id" :value="city.id">
+                                {{ currentLang === 'ar' ? city.ar : city.en }}
+                            </option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down absolute left-4 text-slate-400 text-xs"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 flex-grow">
+            
+            <div class="flex flex-wrap justify-center gap-4 mb-12">
+                <button 
+                    @click="selectedCategory = ''"
+                    :class="selectedCategory === '' ? 'bg-primary text-white shadow-lg ring-2 ring-primary ring-offset-2' : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'"
+                    class="px-8 py-3 rounded-full font-bold transition-all text-sm md:text-base">
+                    {{ t('all') }}
+                </button>
+                <button 
+                    v-for="cat in categories" 
+                    :key="cat.id"
+                    @click="selectedCategory = cat.id"
+                    :class="selectedCategory === cat.id ? 'bg-primary text-white shadow-lg ring-2 ring-primary ring-offset-2' : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'"
+                    class="px-6 py-3 rounded-full font-bold transition-all flex items-center gap-3 text-sm md:text-base">
+                    <i :class="cat.icon"></i> {{ currentLang === 'ar' ? cat.nameAr : cat.nameEn }}
+                </button>
+            </div>
+
+            <div class="flex justify-between items-end mb-8 border-b border-slate-200 pb-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">{{ t('discover') }}</h2>
+                    <p class="text-slate-500 text-sm mt-1">{{ t('showing') }} <span class="font-bold text-primary">{{ filteredListings.length }}</span> {{ t('results') }}</p>
+                </div>
+                <div class="flex gap-2">
+                    <button v-if="filteredListings.length !== listings.length" @click="resetFilters" class="text-sm text-red-500 hover:text-red-700 font-bold">{{ t('clearFilters') }}</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <transition-group name="slide">
+                <div v-for="item in filteredListings" :key="item.id" class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden card-hover flex flex-col h-full group">
+                    
+                    <div class="h-56 bg-slate-200 relative cursor-pointer overflow-hidden" @click="openModal(item)">
+                        <img :src="`https://source.unsplash.com/random/600x400/?${item.imgKeyword || 'syria'}`" class="w-full h-full object-cover transition duration-700 group-hover:scale-110" alt="Business Image">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60"></div>
+                        
+                        <div class="absolute top-4 right-4 flex flex-col gap-2 items-end">
+                            <span class="bg-white/95 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold shadow-sm text-slate-800 flex items-center gap-1">
+                                <i class="fa-solid fa-map-pin text-red-500"></i> {{ getCityName(item.city) }}
+                            </span>
+                        </div>
+                        
+                        <div class="absolute bottom-4 right-4 text-white">
+                             <span class="text-xs font-bold uppercase tracking-wider bg-accent px-2 py-1 rounded mb-1 inline-block">
+                                {{ currentLang === 'ar' ? getCategoryName(item.category).nameAr : getCategoryName(item.category).nameEn }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="p-6 flex-grow flex flex-col relative">
+                        <div class="absolute top-0 left-6 -mt-4 bg-white border border-slate-100 shadow-md px-3 py-1 rounded-full flex items-center gap-1">
+                            <i class="fa-solid fa-star text-accent text-sm"></i>
+                            <span class="font-bold text-slate-800 text-sm">{{ item.rating }}</span>
+                        </div>
+
+                        <h3 class="text-xl font-bold mb-2 text-slate-800 leading-tight mt-2">{{ currentLang === 'ar' ? item.nameAr : item.nameEn }}</h3>
+                        <p class="text-slate-500 text-sm mb-4 line-clamp-2 leading-relaxed flex-grow">{{ currentLang === 'ar' ? item.descAr : item.descEn }}</p>
+                        
+                        <div class="space-y-3 text-sm text-slate-600 mb-6 bg-slate-50 p-3 rounded-xl">
+                            <div class="flex items-start gap-3">
+                                <i class="fa-solid fa-location-arrow w-4 text-center text-primary mt-1"></i>
+                                <span class="line-clamp-1">{{ item.address }}</span>
+                            </div>
+                        </div>
+
+                        <div class="pt-4 border-t border-slate-100 flex justify-between items-center mt-auto">
+                            <button @click="openModal(item)" class="text-slate-700 font-bold text-sm hover:text-primary flex items-center gap-2 transition group/btn">
+                                {{ t('viewDetails') }}
+                                <i class="fa-solid fa-arrow-right transform group-hover/btn:translate-x-1 rtl:group-hover/btn:-translate-x-1 transition"></i>
+                            </button>
+                            
+                            <a :href="`https://wa.me/${item.phone}`" target="_blank" class="bg-green-500 hover:bg-green-600 text-white w-10 h-10 rounded-full flex items-center justify-center transition shadow-lg shadow-green-200 transform hover:scale-105">
+                                <i class="fa-brands fa-whatsapp text-lg"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                </transition-group>
+            </div>
+            
+            <div v-if="filteredListings.length === 0" class="text-center py-24 bg-white rounded-3xl border-2 border-dashed border-slate-200">
+                <div class="bg-slate-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <i class="fa-solid fa-magnifying-glass text-4xl text-slate-300"></i>
+                </div>
+                <h3 class="text-xl font-bold text-slate-800 mb-2">{{ t('noResultsTitle') }}</h3>
+                <p class="text-slate-500 mb-6">{{ t('noResults') }}</p>
+                <button @click="resetFilters" class="text-primary font-bold hover:underline">{{ t('clearFilters') }}</button>
+            </div>
+        </main>
+
+        <transition name="fade">
+            <div v-if="selectedBusiness" class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                <div @click="closeModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm transition-opacity"></div>
+
+                <div class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl transform transition-all relative z-10 max-h-[90vh] overflow-hidden flex flex-col md:flex-row">
+                    
+                    <button @click="closeModal" class="absolute top-4 right-4 z-20 bg-black/20 hover:bg-black/40 text-white p-2 rounded-full transition backdrop-blur-md">
+                        <i class="fa-solid fa-times text-xl w-8 h-8 flex items-center justify-center"></i>
+                    </button>
+
+                    <div class="w-full md:w-2/5 relative h-64 md:h-auto bg-slate-800">
+                        <img :src="`https://source.unsplash.com/random/800x1200/?${selectedBusiness.imgKeyword || 'building'}`" class="w-full h-full object-cover opacity-80">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
+                        
+                        <div class="absolute bottom-0 left-0 right-0 p-8 text-white">
+                            <span class="bg-accent text-white text-xs font-bold px-3 py-1 rounded-md mb-3 inline-block shadow-lg">
+                                {{ currentLang === 'ar' ? getCategoryName(selectedBusiness.category).nameAr : getCategoryName(selectedBusiness.category).nameEn }}
+                            </span>
+                            <h2 class="text-3xl font-bold mb-2 leading-tight">{{ currentLang === 'ar' ? selectedBusiness.nameAr : selectedBusiness.nameEn }}</h2>
+                            <div class="flex items-center gap-2 text-slate-300 text-sm">
+                                <i class="fa-solid fa-map-pin"></i>
+                                <span>{{ getCityName(selectedBusiness.city) }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="w-full md:w-3/5 bg-white flex flex-col max-h-[60vh] md:max-h-full overflow-y-auto">
+                        <div class="p-8 space-y-8">
+                            
+                            <div class="flex flex-wrap gap-3">
+                                <span class="bg-green-100 text-green-800 px-4 py-1.5 rounded-full text-sm font-bold flex items-center gap-2 border border-green-200">
+                                    <i class="fa-solid fa-check-circle"></i> {{ t('verified') }}
+                                </span>
+                                <span class="bg-amber-100 text-amber-800 px-4 py-1.5 rounded-full text-sm font-bold flex items-center gap-2 border border-amber-200">
+                                    <i class="fa-solid fa-star"></i> {{ selectedBusiness.rating }} / 5.0
+                                </span>
+                                <span class="bg-blue-100 text-blue-800 px-4 py-1.5 rounded-full text-sm font-bold flex items-center gap-2 border border-blue-200">
+                                    <i class="fa-regular fa-clock"></i> {{ t('openNow') }}
+                                </span>
+                            </div>
+
+                            <div>
+                                <h4 class="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+                                    <i class="fa-solid fa-align-left text-primary"></i> {{ t('about') }}
+                                </h4>
+                                <p class="text-slate-600 leading-relaxed text-base">
+                                    {{ currentLang === 'ar' ? selectedBusiness.descAr : selectedBusiness.descEn }}
+                                    <br><br>
+                                    <span class="opacity-70 text-sm">{{ t('loremIpsum') }}</span>
+                                </p>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                                <div>
+                                    <h4 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">{{ t('contactInfo') }}</h4>
+                                    <ul class="space-y-4 text-slate-700">
+                                        <li class="flex items-start gap-3">
+                                            <div class="bg-white p-2 rounded-lg shadow-sm text-primary"><i class="fa-solid fa-location-dot"></i></div>
+                                            <span class="text-sm mt-1 font-medium">{{ selectedBusiness.address }}</span>
+                                        </li>
+                                        <li class="flex items-center gap-3">
+                                            <div class="bg-white p-2 rounded-lg shadow-sm text-primary"><i class="fa-solid fa-phone"></i></div>
+                                            <span class="text-sm font-bold" dir="ltr">{{ selectedBusiness.phone }}</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">{{ t('hours') }}</h4>
+                                    <ul class="space-y-2 text-sm text-slate-600">
+                                        <li class="flex justify-between border-b border-slate-200 pb-1"><span>{{ t('weekdays') }}</span> <span class="font-semibold text-slate-800">09:00 - 18:00</span></li>
+                                        <li class="flex justify-between border-b border-slate-200 pb-1"><span>{{ t('friday') }}</span> <span class="text-red-500 font-bold">{{ t('closed') }}</span></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-auto p-6 border-t border-slate-100 bg-white sticky bottom-0 z-10 flex gap-4">
+                            <a :href="`http://maps.google.com/?q=${encodeURIComponent(selectedBusiness.address + ' ' + selectedBusiness.city)}`" target="_blank" 
+                               class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition">
+                                <i class="fa-solid fa-map-marked-alt text-xl"></i> {{ t('openMap') }}
+                            </a>
+                            <a :href="`https://wa.me/${selectedBusiness.phone}`" target="_blank" 
+                               class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition shadow-lg shadow-green-200">
+                                <i class="fa-brands fa-whatsapp text-2xl"></i> {{ t('chat') }}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <transition name="fade">
+            <div v-if="showAdmin" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div @click="closeAdmin" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm"></div>
+                
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg relative z-10 overflow-hidden flex flex-col max-h-[90vh]">
+                    <div class="bg-slate-800 text-white p-5 flex justify-between items-center shrink-0">
+                        <h3 class="font-bold text-lg flex items-center gap-2">
+                            <i class="fa-solid fa-shield-halved text-accent"></i> Admin Control
+                        </h3>
+                        <button @click="closeAdmin" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-times text-xl"></i></button>
+                    </div>
+
+                    <div v-if="!isAuthenticated" class="p-10 text-center flex-grow flex flex-col justify-center">
+                        <div class="bg-slate-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <i class="fa-solid fa-lock text-4xl text-slate-400"></i>
+                        </div>
+                        <h4 class="text-xl font-bold mb-2">Restricted Area</h4>
+                        <p class="mb-6 text-slate-500 text-sm">Please enter the administrator password to add new listings.</p>
+                        
+                        <div class="relative mb-4">
+                            <input v-model="passwordInput" type="password" placeholder="Password (123456)" 
+                                class="w-full p-4 border-2 border-slate-200 rounded-xl focus:border-primary focus:ring-0 outline-none text-center text-lg tracking-widest transition">
+                        </div>
+                        
+                        <button @click="login" class="w-full bg-primary text-white font-bold py-4 rounded-xl hover:bg-secondary transition shadow-lg">
+                            <i class="fa-solid fa-key mr-2"></i> Login
+                        </button>
+                        <p v-if="loginError" class="text-red-500 text-sm mt-4 font-bold bg-red-50 p-2 rounded"><i class="fa-solid fa-triangle-exclamation"></i> Incorrect Password</p>
+                    </div>
+
+                    <div v-else class="p-6 overflow-y-auto custom-scrollbar">
+                        <div class="flex justify-between items-center mb-6">
+                            <h4 class="font-bold text-slate-800 text-lg">New Business Entry</h4>
+                            <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-bold">Authenticated</span>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 mb-1">Arabic Name</label>
+                                    <input v-model="newListing.nameAr" placeholder="مثال: مشفى دمشق" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:border-primary outline-none text-right">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 mb-1">English Name</label>
+                                    <input v-model="newListing.nameEn" placeholder="e.g. Damascus Hospital" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:border-primary outline-none">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 mb-1">Category</label>
+                                    <select v-model="newListing.category" class="w-full p-3 bg-white border border-slate-200 rounded-lg focus:border-primary outline-none">
+                                        <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.nameEn }}</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 mb-1">City</label>
+                                    <select v-model="newListing.city" class="w-full p-3 bg-white border border-slate-200 rounded-lg focus:border-primary outline-none">
+                                        <option v-for="c in cities" :key="c.id" :value="c.id">{{ c.en }}</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Address</label>
+                                <input v-model="newListing.address" placeholder="Full Address" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:border-primary outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Phone Number</label>
+                                <input v-model="newListing.phone" placeholder="963 9xx xxx xxx" type="number" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:border-primary outline-none">
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <textarea v-model="newListing.descAr" placeholder="وصف الخدمة (عربي)" rows="3" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:border-primary outline-none text-right"></textarea>
+                                <textarea v-model="newListing.descEn" placeholder="Description (English)" rows="3" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:border-primary outline-none"></textarea>
+                            </div>
+
+                            <div class="pt-4 border-t border-slate-100 flex gap-3">
+                                <button @click="submitListing" class="flex-1 bg-primary text-white font-bold py-3 rounded-lg hover:bg-secondary transition shadow-md flex justify-center items-center gap-2">
+                                    <i class="fa-solid fa-save"></i> Save Listing
+                                </button>
+                                <button @click="resetData" class="px-4 py-3 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition font-bold text-sm" title="Reset All Data">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <footer class="bg-slate-900 text-slate-400 py-12 mt-auto text-center border-t border-slate-800">
+            <div class="max-w-7xl mx-auto px-4">
+                <i class="fa-solid fa-map-location-dot text-5xl text-primary mb-6 block opacity-50 hover:opacity-100 transition duration-500"></i>
+                <p class="mb-2 text-slate-300 font-bold text-lg">Syria Connect &copy; 2026</p>
+                <p class="text-sm opacity-50 max-w-md mx-auto">{{ t('footerText') }}</p>
+                <div class="mt-8 flex justify-center gap-6 text-2xl">
+                    <i class="fa-brands fa-facebook hover:text-blue-500 cursor-pointer transition"></i>
+                    <i class="fa-brands fa-instagram hover:text-pink-500 cursor-pointer transition"></i>
+                    <i class="fa-brands fa-twitter hover:text-blue-400 cursor-pointer transition"></i>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                // --- Configuration ---
+                const ADMIN_PASS = "123456"; // Default Password
+                const STORAGE_KEY = "syria_connect_db_ultimate";
+
+                // --- State Management ---
+                const currentLang = ref('ar');
+                const searchQuery = ref('');
+                const selectedCategory = ref('');
+                const selectedCity = ref('');
+                const selectedBusiness = ref(null); // Controls Details Modal
+                
+                // Admin State
+                const showAdmin = ref(false);
+                const passwordInput = ref('');
+                const isAuthenticated = ref(false);
+                const loginError = ref(false);
+                const newListing = ref({
+                    nameAr: '', nameEn: '', category: 'clinic', city: 'damascus', 
+                    address: '', phone: '', descAr: '', descEn: '', imgKeyword: 'building'
+                });
+
+                // --- DATA: 14 Governorates (Complete) ---
+                const cities = [
+                    { id: 'damascus', en: 'Damascus', ar: 'دمشق' },
+                    { id: 'rif_dimashq', en: 'Rif Dimashq', ar: 'ريف دمشق' },
+                    { id: 'aleppo', en: 'Aleppo', ar: 'حلب' },
+                    { id: 'homs', en: 'Homs', ar: 'حمص' },
+                    { id: 'hama', en: 'Hama', ar: 'حماة' },
+                    { id: 'latakia', en: 'Latakia', ar: 'اللاذقية' },
+                    { id: 'tartus', en: 'Tartus', ar: 'طرطوس' },
+                    { id: 'idlib', en: 'Idlib', ar: 'إدلب' },
+                    { id: 'raqqa', en: 'Al-Raqqa', ar: 'الرقة' },
+                    { id: 'deir_ezzor', en: 'Deir ez-Zor', ar: 'دير الزور' },
+                    { id: 'hasakah', en: 'Al-Hasakah', ar: 'الحسكة' },
+                    { id: 'daraa', en: 'Daraa', ar: 'درعا' },
+                    { id: 'suwayda', en: 'As-Suwayda', ar: 'السويداء' },
+                    { id: 'quneitra', en: 'Quneitra', ar: 'القنيطرة' }
+                ];
+
+                const categories = [
+                    { id: 'clinic', nameAr: 'طب وصحة', nameEn: 'Medical', icon: 'fa-solid fa-heart-pulse' },
+                    { id: 'pharmacy', nameAr: 'صيدليات', nameEn: 'Pharmacies', icon: 'fa-solid fa-pills' },
+                    { id: 'factory', nameAr: 'صناعة ومعامل', nameEn: 'Industrial', icon: 'fa-solid fa-industry' },
+                    { id: 'office', nameAr: 'شركات ومكاتب', nameEn: 'Corporate', icon: 'fa-solid fa-building' },
+                    { id: 'small_biz', nameAr: 'أعمال ومتاجر', nameEn: 'Local Biz', icon: 'fa-solid fa-store' },
+                ];
+
+                const translations = {
+                    ar: {
+                        appName: 'سـوريا كونيـكت', heroTitle: 'دليل الأعمال السوري الشامل', heroTag: 'منصة خدمية متكاملة',
+                        heroSubtitle: 'وجهتك الأولى للبحث عن أفضل الأطباء، الشركات، والمعامل في جميع المحافظات السورية',
+                        searchPlaceholder: 'ابحث عن اسم العيادة، الشركة، أو الخدمة...', allCities: 'كل المحافظات', search: 'بحث',
+                        all: 'الكل', discover: 'اكتشف الأفضل', showing: 'عرض', results: 'نتيجة', clearFilters: 'مسح الفلاتر',
+                        viewDetails: 'عرض التفاصيل', noResults: 'لا توجد نتائج مطابقة', noResultsTitle: 'لم نعثر على شيء',
+                        verified: 'مؤسسة موثقة', about: 'عن المنشأة', contactInfo: 'معلومات التواصل', hours: 'ساعات الدوام',
+                        weekdays: 'السبت - الخميس', friday: 'الجمعة', closed: 'مغلق', openMap: 'الموقع على الخريطة', chat: 'واتساب',
+                        openNow: 'مفتوح', addListing: 'أضف عملك', footerText: 'نربط المواطن السوري بأفضل الخدمات المحلية',
+                        loremIpsum: 'هذا النص هو مثال لنص يمكن أن يستبدل في نفس المساحة.'
+                    },
+                    en: {
+                        appName: 'Syria Connect', heroTitle: 'The Ultimate Syrian Business Directory', heroTag: 'Integrated Platform',
+                        heroSubtitle: 'Your first destination to find the best doctors, companies, and factories across all Syrian governorates',
+                        searchPlaceholder: 'Search for clinic, company, or service...', allCities: 'All Governorates', search: 'Search',
+                        all: 'All', discover: 'Discover Best', showing: 'Showing', results: 'results', clearFilters: 'Clear Filters',
+                        viewDetails: 'View Details', noResults: 'No results found', noResultsTitle: 'Nothing Found',
+                        verified: 'Verified', about: 'About', contactInfo: 'Contact Info', hours: 'Working Hours',
+                        weekdays: 'Sat - Thu', friday: 'Friday', closed: 'Closed', openMap: 'Open Map', chat: 'WhatsApp',
+                        openNow: 'Open Now', addListing: 'Add Listing', footerText: 'Connecting Syrian citizens with local services',
+                        loremIpsum: 'This text is a placeholder to demonstrate the visual form.'
+                    }
+                };
+
+                // --- RICH INITIAL DATA ---
+                const defaultListings = [
+                    { id: 1, category: 'clinic', nameAr: 'مشفى الرازي التخصصي', nameEn: 'Al-Razi Specialized Hospital', city: 'damascus', address: 'دمشق، المزة فيلات غربية', phone: '963116666666', rating: 4.9, imgKeyword: 'hospital', descAr: 'مشفى متكامل يضم كافة الاختصاصات الجراحية والداخلية، مجهز بأحدث غرف العمليات والعناية المشددة.', descEn: 'Integrated hospital with all surgical and internal specialties, equipped with the latest operating rooms and intensive care.' },
+                    { id: 2, category: 'pharmacy', nameAr: 'صيدلية الكندي المركزية', nameEn: 'Al-Kindi Central Pharmacy', city: 'aleppo', address: 'حلب، شارع القوتلي', phone: '963212223333', rating: 4.7, imgKeyword: 'medicine', descAr: 'صيدلية مناوبة تقدم كافة أنواع الأدوية والمستحضرات التجميلية العالمية.', descEn: 'On-duty pharmacy offering all kinds of medicines and international cosmetics.' },
+                    { id: 3, category: 'factory', nameAr: 'شركة الجود للصناعات الغذائية', nameEn: 'Al-Joud Food Industries', city: 'latakia', address: 'اللاذقية، المنطقة الصناعية', phone: '963414445555', rating: 4.8, imgKeyword: 'factory', descAr: 'رواد صناعة المشروبات الغازية والعصائر الطبيعية في سوريا.', descEn: 'Pioneers in the soft drinks and natural juices industry in Syria.' },
+                    { id: 4, category: 'office', nameAr: 'المكتب الهندسي للاستشارات', nameEn: 'Engineering Consultants Office', city: 'homs', address: 'حمص، الدبلان', phone: '963313334444', rating: 4.5, imgKeyword: 'architect', descAr: 'تصاميم معمارية ودراسات إنشائية، إشراف وتنفيذ مشاريع سكنية وتجارية.', descEn: 'Architectural designs and structural studies, supervision and execution of projects.' },
+                    { id: 5, category: 'small_biz', nameAr: 'حلويات الباشا', nameEn: 'Al-Pasha Sweets', city: 'rif_dimashq', address: 'جرمانا، الساحة الرئيسية', phone: '963115556666', rating: 5.0, imgKeyword: 'baklava', descAr: 'أعرق محلات الحلويات الشرقية، نابلسية، مدلوقة، وبقلاوة بالفستق الحلبي.', descEn: 'Oldest oriental sweets shops, Nabulsi, Madlouka, and Baklava.' },
+                    { id: 6, category: 'clinic', nameAr: 'عيادة الدكتورة سناء للجلدية', nameEn: 'Dr. Sanaa Dermatology Clinic', city: 'tartus', address: 'طرطوس، المشبكة', phone: '963432221111', rating: 4.6, imgKeyword: 'skin', descAr: 'علاج كافة الأمراض الجلدية، حقن فيلر وبوتوكس وعناية بالبشرة بالليزر.', descEn: 'Treatment of all skin diseases, filler and botox injections, and laser skin care.' },
+                    { id: 7, category: 'factory', nameAr: 'معمل زيوت حماة الوطنية', nameEn: 'Hama National Oils Factory', city: 'hama', address: 'حماة، طريق حلب', phone: '963339998888', rating: 4.4, imgKeyword: 'oliveoil', descAr: 'إنتاج أفخر أنواع زيت الزيتون البكر الممتاز، وزيوت عباد الشمس.', descEn: 'Production of the finest extra virgin olive oil and sunflower oils.' },
+                    { id: 8, category: 'office', nameAr: 'شركة القمة للبرمجيات', nameEn: 'Summit Software Co.', city: 'damascus', address: 'دمشق، البرامكة - المنطقة الحرة', phone: '963112220000', rating: 4.9, imgKeyword: 'software', descAr: 'تطوير تطبيقات الويب والموبايل، حلول برمجية للشركات والمؤسسات.', descEn: 'Web and mobile app development, software solutions for companies.' }
+                ];
+
+                const listings = ref([...defaultListings]);
+
+                // --- Functions ---
+                const t = (key) => translations[currentLang.value][key];
+
+                const toggleLang = () => {
+                    currentLang.value = currentLang.value === 'ar' ? 'en' : 'ar';
+                    document.documentElement.dir = currentLang.value === 'ar' ? 'rtl' : 'ltr';
+                };
+
+                const getCategoryName = (id) => categories.find(c => c.id === id) || { nameAr: '', nameEn: '' };
+                
+                const getCityName = (id) => {
+                    const c = cities.find(ct => ct.id === id);
+                    return c ? (currentLang.value === 'ar' ? c.ar : c.en) : id;
+                };
+
+                // --- Modal Logic ---
+                const openModal = (item) => {
+                    selectedBusiness.value = item;
+                    document.body.style.overflow = 'hidden'; 
+                };
+                const closeModal = () => {
+                    selectedBusiness.value = null;
+                    document.body.style.overflow = 'auto';
+                };
+
+                const resetFilters = () => {
+                    searchQuery.value = '';
+                    selectedCategory.value = '';
+                    selectedCity.value = '';
+                };
+
+                // --- Admin & Storage Logic ---
+                onMounted(() => {
+                    const saved = localStorage.getItem(STORAGE_KEY);
+                    if (saved) {
+                        listings.value = JSON.parse(saved);
+                    }
+                });
+
+                const openAdmin = () => showAdmin.value = true;
+                const closeAdmin = () => {
+                    showAdmin.value = false;
+                    passwordInput.value = '';
+                    loginError.value = false;
+                };
+
+                const login = () => {
+                    if (passwordInput.value === ADMIN_PASS) {
+                        isAuthenticated.value = true;
+                        loginError.value = false;
+                    } else {
+                        loginError.value = true;
+                    }
+                };
+
+                const submitListing = () => {
+                    if(!newListing.value.nameAr || !newListing.value.category) {
+                        alert("Please fill in at least the Arabic Name and Category / يرجى تعبئة الاسم والتصنيف");
+                        return;
+                    }
+                    const newItem = {
+                        id: Date.now(),
+                        ...newListing.value,
+                        rating: 5.0, // New items start with 5 stars
+                        isOpen: true
+                    };
+                    
+                    listings.value.unshift(newItem); // Add to top
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(listings.value)); // Save
+                    
+                    // Reset Form
+                    newListing.value = { nameAr: '', nameEn: '', category: 'clinic', city: 'damascus', address: '', phone: '', descAr: '', descEn: '', imgKeyword: 'business' };
+                    closeAdmin();
+                    alert("Listing Added Successfully! تمت الإضافة بنجاح");
+                };
+
+                const resetData = () => {
+                    if(confirm("Warning: This will delete all custom additions and restore default data. Are you sure?")) {
+                        localStorage.removeItem(STORAGE_KEY);
+                        listings.value = [...defaultListings];
+                        location.reload();
+                    }
+                };
+
+                // --- Computed Filter Logic ---
+                const filteredListings = computed(() => {
+                    return listings.value.filter(item => {
+                        const s = searchQuery.value.toLowerCase();
+                        const matchesSearch = item.nameAr.includes(s) || 
+                                              (item.nameEn && item.nameEn.toLowerCase().includes(s)) ||
+                                              (item.descAr && item.descAr.includes(s));
+                        
+                        const matchesCategory = selectedCategory.value ? item.category === selectedCategory.value : true;
+                        const matchesCity = selectedCity.value ? item.city === selectedCity.value : true;
+                        
+                        return matchesSearch && matchesCategory && matchesCity;
+                    });
+                });
+
+                return {
+                    currentLang, searchQuery, selectedCategory, selectedCity, selectedBusiness,
+                    cities, categories, filteredListings, listings,
+                    t, toggleLang, getCategoryName, getCityName,
+                    openModal, closeModal, resetFilters,
+                    showAdmin, openAdmin, closeAdmin, passwordInput, isAuthenticated, login, loginError,
+                    newListing, submitListing, resetData
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
 </html>
